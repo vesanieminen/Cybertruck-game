@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cybertruck Drive</title>
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <div id="game-container"></div>
+
+    <!-- HUD -->
+    <div id="hud" class="hidden">
+      <div id="speedometer">
+        <span id="speed-value">0</span>
+        <span id="speed-unit">km/h</span>
+      </div>
+    </div>
+
+    <!-- Start Screen -->
+    <div id="start-screen" class="overlay">
+      <h1 class="title" data-text="CYBERTRUCK">CYBERTRUCK</h1>
+      <p class="subtitle">EXPLORE THE LANDSCAPE</p>
+      <button id="start-btn" class="drive-btn">DRIVE</button>
+      <div class="controls-info">
+        <div class="control-row"><kbd>&larr;</kbd> <kbd>&rarr;</kbd> or <kbd>A</kbd> <kbd>D</kbd> STEER</div>
+        <div class="control-row"><kbd>&uarr;</kbd> or <kbd>W</kbd> ACCELERATE &mdash; <kbd>&darr;</kbd> or <kbd>S</kbd> BRAKE</div>
+      </div>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

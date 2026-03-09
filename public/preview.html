@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Model Preview - Fullbright</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #333; overflow: hidden; font-family: monospace; }
+    canvas { display: block; }
+    #info {
+      position: fixed; top: 10px; left: 10px;
+      color: #0f0; background: rgba(0,0,0,0.8);
+      padding: 12px; font-size: 13px; line-height: 1.6;
+      border: 1px solid #0f0; max-width: 400px;
+      white-space: pre-wrap;
+    }
+    #controls {
+      position: fixed; bottom: 10px; left: 10px;
+      color: #fff; background: rgba(0,0,0,0.8);
+      padding: 10px; font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div id="info">Loading model...</div>
+  <div id="controls">
+    Drag to orbit | Scroll to zoom | R to reset<br>
+    1: GLB | 2: FBX | 3: Fallback
+  </div>
+  <script type="module">
+    import * as THREE from '/node_modules/.vite/deps/three.js';
+
+    // We can't easily import from vite deps in a static page,
+    // so let's use a simpler approach with importmap
+  </script>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.183.2/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.183.2/examples/jsm/"
+      }
+    }
+  </script>
+  <script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+    import { FBXLoader } from 'three/addons/loaders/FBXLoader.js';
+
+    const info = document.getElementById('info');
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.setClearColor(0x555555);
+    document.body.appendChild(renderer.domElement);
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 10000);
+    camera.position.set(800, 500, 800);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+
+    // Fullbright lighting - strong enough for large FBX models
+    const ambient = new THREE.AmbientLight(0xffffff, 3.0);
+    scene.add(ambient);
+    const dirLight = new THREE.DirectionalLight(0xffffff, 3.0);
+    dirLight.position.set(500, 1000, 500);
+    scene.add(dirLight);
+    const dirLight2 = new THREE.DirectionalLight(0xffffff, 2.0);
+    dirLight2.position.set(-500, 500, -500);
+    scene.add(dirLight2);
+    const dirLight3 = new THREE.DirectionalLight(0xffffff, 1.5);
+    dirLight3.position.set(0, -500, 0);
+    scene.add(dirLight3);
+
+    // Grid helper (large enough for FBX models in cm)
+    const grid = new THREE.GridHelper(2000, 40, 0x888888, 0x444444);
+    scene.add(grid);
+
+    // Axes helper
+    const axes = new THREE.AxesHelper(200);
+    scene.add(axes);
+
+    let currentModel = null;
+
+    function clearModel() {
+      if (currentModel) {
+        scene.remove(currentModel);
+        currentModel = null;
+      }
+    }
+
+    function showModelInfo(model, label) {
+      const bbox = new THREE.Box3().setFromObject(model);
+      const size = bbox.getSize(new THREE.Vector3());
+      const center = bbox.getCenter(new THREE.Vector3());
+
+      let meshCount = 0;
+      let meshNames = [];
+      model.traverse(obj => {
+        if (obj.isMesh) {
+          meshCount++;
+          meshNames.push(obj.name || 'unnamed');
+        }
+      });
+
+      info.textContent = `${label}
+Size: ${size.x.toFixed(2)} x ${size.y.toFixed(2)} x ${size.z.toFixed(2)}
+Center: ${center.x.toFixed(2)}, ${center.y.toFixed(2)}, ${center.z.toFixed(2)}
+Min: ${bbox.min.x.toFixed(2)}, ${bbox.min.y.toFixed(2)}, ${bbox.min.z.toFixed(2)}
+Max: ${bbox.max.x.toFixed(2)}, ${bbox.max.y.toFixed(2)}, ${bbox.max.z.toFixed(2)}
+Meshes: ${meshCount}
+Names: ${meshNames.join(', ')}
+Scale: ${model.scale.x.toFixed(5)}`;
+
+      // Frame the camera
+      const maxDim = Math.max(size.x, size.y, size.z);
+      const dist = maxDim * 2;
+      camera.position.set(dist * 0.7, dist * 0.5, dist * 0.7);
+      controls.target.copy(center);
+      controls.update();
+    }
+
+    // Expose for debugging
+    window.__scene = scene;
+    window.__camera = camera;
+
+    async function loadGLB() {
+      clearModel();
+      info.textContent = 'Loading GLB...';
+      try {
+        const loader = new GLTFLoader();
+        const gltf = await loader.loadAsync('/models/tesla-cybertruck.glb');
+        currentModel = gltf.scene;
+        fixMaterials(currentModel);
+        scene.add(currentModel);
+        showModelInfo(currentModel, 'GLB: tesla-cybertruck.glb');
+      } catch (e) {
+        info.textContent = 'GLB load failed: ' + e.message;
+      }
+    }
+
+    function fixMaterials(model) {
+      let matInfo = [];
+      const toRemove = [];
+      model.traverse(obj => {
+        const nameLower = obj.name.toLowerCase();
+        if (nameLower.includes('lod1') || nameLower === 'crack') {
+          toRemove.push(obj);
+        }
+        if (obj.isMesh) {
+          const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+          for (const mat of mats) {
+            mat.transparent = false;
+            mat.opacity = 1.0;
+            mat.depthWrite = true;
+            mat.side = THREE.DoubleSide;
+            mat.needsUpdate = true;
+            matInfo.push(`${obj.name}: ${mat.type}, color=${mat.color ? '#'+mat.color.getHexString() : 'n/a'}, map=${!!mat.map}, opacity=${mat.opacity}`);
+          }
+        }
+      });
+      for (const obj of toRemove) {
+        obj.parent?.removeChild?.(obj) || obj.parent?.remove(obj);
+      }
+      console.log('Materials fixed:', matInfo);
+    }
+
+    async function loadFBX() {
+      clearModel();
+      info.textContent = 'Loading FBX...';
+      try {
+        const loader = new FBXLoader();
+        loader.setResourcePath('/models/textures/');
+        const fbx = await loader.loadAsync('/models/tesla-cybertruck.fbx');
+        fixMaterials(fbx);
+        currentModel = fbx;
+        scene.add(currentModel);
+        showModelInfo(currentModel, 'FBX: tesla-cybertruck.fbx');
+      } catch (e) {
+        info.textContent = 'FBX load failed: ' + e.message;
+      }
+    }
+
+    function loadFallback() {
+      clearModel();
+
+      const mat = new THREE.MeshStandardMaterial({
+        color: 0xc0ccd4, metalness: 0.7, roughness: 0.25,
+      });
+
+      const profile = new THREE.Shape();
+      profile.moveTo(-2.9, 0.5);
+      profile.lineTo(2.9, 0.5);
+      profile.lineTo(2.9, 0.75);
+      profile.lineTo(2.0, 0.85);
+      profile.lineTo(1.5, 0.95);
+      profile.lineTo(0.3, 1.95);
+      profile.lineTo(-0.4, 1.95);
+      profile.lineTo(-1.0, 1.85);
+      profile.lineTo(-1.3, 1.65);
+      profile.lineTo(-2.5, 1.3);
+      profile.lineTo(-2.9, 1.25);
+      profile.lineTo(-2.9, 0.5);
+
+      const geo = new THREE.ExtrudeGeometry(profile, { depth: 2.1, bevelEnabled: false });
+      geo.translate(0, 0, -1.05);
+      currentModel = new THREE.Mesh(geo, mat);
+      scene.add(currentModel);
+      showModelInfo(currentModel, 'Procedural Fallback');
+    }
+
+    // Key handlers
+    window.addEventListener('keydown', (e) => {
+      if (e.key === '1') loadGLB();
+      if (e.key === '2') loadFBX();
+      if (e.key === '3') loadFallback();
+      if (e.key === 'r' || e.key === 'R') {
+        camera.position.set(8, 5, 8);
+        controls.target.set(0, 0, 0);
+        controls.update();
+      }
+    });
+
+    // Render loop
+    function animate() {
+      requestAnimationFrame(animate);
+      controls.update();
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    // Resize
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // Auto-load FBX
+    loadFBX();
+  </script>
+</body>
+</html>
