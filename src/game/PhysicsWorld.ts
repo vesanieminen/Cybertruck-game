@@ -10,7 +10,7 @@ export class PhysicsWorld {
     this.world = new CANNON.World();
     this.world.gravity.set(0, GRAVITY, 0);
     this.world.broadphase = new CANNON.SAPBroadphase(this.world);
-    (this.world.solver as CANNON.GSSolver).iterations = 10;
+    (this.world.solver as CANNON.GSSolver).iterations = 20;
 
     this.groundMaterial = new CANNON.Material('ground');
 
@@ -68,6 +68,6 @@ export class PhysicsWorld {
   }
 
   step(delta: number) {
-    this.world.step(PHYSICS_TIMESTEP, delta, 3);
+    this.world.step(PHYSICS_TIMESTEP, delta, 10);
   }
 }

@@ -5,6 +5,7 @@ import { Vehicle } from './Vehicle';
 import { NatureEnvironment } from './NatureEnvironment';
 import { ChaseCamera } from './ChaseCamera';
 import { InputHandler } from './InputHandler';
+import { StuntStructures } from './StuntStructures';
 import { GameState, COLORS } from './constants';
 import type { GameCallbacks } from './constants';
 
@@ -61,6 +62,9 @@ export class CybertruckGame {
 
     // Environment (sky, trees, rocks, lighting)
     this.environment = new NatureEnvironment(this.scene, this.terrain, this.physics.world);
+
+    // Stunt structures (ramps, platforms, half-pipe, spiral tower)
+    new StuntStructures(this.scene, this.terrain, this.physics.world, this.physics.groundMaterial);
 
     // Camera
     this.chaseCamera = new ChaseCamera(

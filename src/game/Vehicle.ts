@@ -52,6 +52,7 @@ export class Vehicle {
     this.chassisBody.position.set(0, 4, 0); // Spawn above terrain
     this.chassisBody.angularDamping = 0.4;
     this.chassisBody.linearDamping = 0.05;
+    this.chassisBody.collisionResponse = true;
 
     // RaycastVehicle: +Z is forward
     this.raycastVehicle = new CANNON.RaycastVehicle({
