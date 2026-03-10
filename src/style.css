@@ -123,6 +123,41 @@ body {
   margin-top: 16px;
 }
 
+/* ===== CAR SELECTOR ===== */
+#car-selector {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+  justify-content: center;
+}
+
+.car-option {
+  font-family: 'Orbitron', sans-serif;
+  font-weight: 700;
+  font-size: 0.9rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  padding: 10px 20px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.car-option:hover {
+  border-color: rgba(255, 255, 255, 0.6);
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.car-option.selected {
+  border-color: #fff;
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  box-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
+}
+
 /* ===== CONTROLS INFO ===== */
 .controls-info {
   margin-top: 30px;

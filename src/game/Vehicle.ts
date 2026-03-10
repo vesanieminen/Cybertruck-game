@@ -1,6 +1,7 @@
 import * as CANNON from 'cannon-es';
 import * as THREE from 'three';
-import { CybertruckModel } from './CybertruckModel';
+import { VehicleModel, getCarWheelXInset } from './VehicleModel';
+import type { CarType } from './VehicleModel';
 import type { InputState } from './InputHandler';
 import type { Terrain } from './Terrain';
 import {
@@ -24,7 +25,7 @@ import {
 export class Vehicle {
   public chassisBody: CANNON.Body;
   public raycastVehicle: CANNON.RaycastVehicle;
-  public model: CybertruckModel;
+  public model: VehicleModel;
 
   // Wheel visuals (separate from model, synced to physics)
   public wheelGroup: THREE.Group;
@@ -39,7 +40,7 @@ export class Vehicle {
   private currentSteer = 0;
   private terrain: Terrain | null = null;
 
-  constructor(world: CANNON.World) {
+  constructor(world: CANNON.World, carType: CarType = 'cybertruck') {
     // Chassis physics body — compact so it doesn't scrape terrain on hills
     const chassisShape = new CANNON.Box(
       new CANNON.Vec3(
@@ -65,7 +66,8 @@ export class Vehicle {
     });
 
     // Wheel connection points — at bottom of chassis, offset outward
-    const wheelX = VEHICLE_CHASSIS_WIDTH / 2 + 0.1;
+    const inset = getCarWheelXInset(carType);
+    const wheelX = VEHICLE_CHASSIS_WIDTH / 2 + 0.1 - inset;
     const wheelY = -VEHICLE_CHASSIS_HEIGHT / 2; // Bottom of chassis
     const frontZ = VEHICLE_CHASSIS_LENGTH / 2 - 0.8;
     const rearZ = -(VEHICLE_CHASSIS_LENGTH / 2 - 0.8);
@@ -96,7 +98,7 @@ export class Vehicle {
     this.raycastVehicle.addToWorld(world);
 
     // Visual model
-    this.model = new CybertruckModel();
+    this.model = new VehicleModel(carType);
 
     // Wheel visuals — individual meshes synced to physics wheel transforms
     this.wheelGroup = new THREE.Group();

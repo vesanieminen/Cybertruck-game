@@ -21,14 +21,29 @@
     <!-- Pause Menu -->
     <div id="pause-screen" class="overlay hidden">
       <h1 class="title">PAUSED</h1>
-      <button id="resume-btn" class="drive-btn">RESUME</button>
-      <button id="new-world-btn" class="drive-btn">NEW WORLD</button>
+      <button id="resume-btn" class="drive-btn pause-menu-item">RESUME</button>
+      <button id="switch-car-btn" class="drive-btn pause-menu-item">SWITCH CAR</button>
+      <button id="new-world-btn" class="drive-btn pause-menu-item">NEW WORLD</button>
+    </div>
+
+    <!-- Car Picker (from pause menu) -->
+    <div id="car-picker-screen" class="overlay hidden">
+      <h1 class="title">CHOOSE CAR</h1>
+      <button class="drive-btn car-pick-option" data-car="cybertruck">CYBERTRUCK</button>
+      <button class="drive-btn car-pick-option" data-car="model-s">MODEL S</button>
+      <button id="car-picker-back-btn" class="drive-btn">BACK</button>
     </div>
 
     <!-- Start Screen -->
     <div id="start-screen" class="overlay">
       <h1 class="title" data-text="CYBERTRUCK">CYBERTRUCK</h1>
       <p class="subtitle">EXPLORE THE LANDSCAPE</p>
+
+      <div id="car-selector">
+        <button class="car-option selected" data-car="cybertruck">CYBERTRUCK</button>
+        <button class="car-option" data-car="model-s">MODEL S</button>
+      </div>
+
       <button id="start-btn" class="drive-btn">DRIVE</button>
       <div class="controls-info">
         <div class="control-row"><kbd>&larr;</kbd> <kbd>&rarr;</kbd> or <kbd>A</kbd> <kbd>D</kbd> STEER</div>

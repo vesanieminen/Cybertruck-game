@@ -10,6 +10,8 @@ import { EVSound } from './EVSound';
 import { CollisionSound } from './CollisionSound';
 import { GameState, COLORS } from './constants';
 import type { GameCallbacks } from './constants';
+import { CAR_TYPES } from './VehicleModel';
+import type { CarType } from './VehicleModel';
 
 export class CybertruckGame {
   private renderer: THREE.WebGLRenderer;
@@ -31,8 +33,11 @@ export class CybertruckGame {
   private state: GameState = GameState.MENU;
   private callbacks: GameCallbacks;
   private seed: number;
+  private carType: CarType = 'cybertruck';
   private pauseMenuIndex = 0;
-  private static readonly PAUSE_MENU_ITEMS = 2; // Resume, New World
+  private carPickerIndex = 0;
+  private static readonly PAUSE_MENU_ITEMS = 3; // Resume, Switch Car, New World
+  private static readonly CAR_PICKER_ITEMS = CAR_TYPES.length + 1; // cars + Back button
 
   constructor(container: HTMLElement, callbacks: GameCallbacks) {
     this.container = container;
@@ -73,11 +78,23 @@ export class CybertruckGame {
       if (e.code === 'Escape') {
         if (this.state === GameState.PLAYING) this.pause();
         else if (this.state === GameState.PAUSED) this.resume();
+        else if (this.state === GameState.CAR_PICKER) this.backFromCarPicker();
       }
       if (this.state === GameState.PLAYING) {
         if (e.code === 'KeyG') this.vehicle.cycleDebug();
         if (e.code === 'KeyR') this.vehicle.reset();
         if (e.code === 'KeyC') this.chaseCamera.cycleMode();
+      }
+      // Keyboard left/right on start screen to switch car
+      if (this.state === GameState.MENU) {
+        if (e.code === 'ArrowLeft' || e.code === 'ArrowRight') {
+          e.preventDefault();
+          const currentIdx = CAR_TYPES.indexOf(this.carType);
+          const dir = e.code === 'ArrowLeft' ? -1 : 1;
+          const newIdx = (currentIdx + dir + CAR_TYPES.length) % CAR_TYPES.length;
+          this.setCarType(CAR_TYPES[newIdx]);
+          this.callbacks.onStartCarChange?.(newIdx);
+        }
       }
     });
 
@@ -101,7 +118,7 @@ export class CybertruckGame {
     this.physics.createGroundFromHeightmap(this.terrain.heightData);
 
     // Vehicle
-    this.vehicle = new Vehicle(this.physics.world);
+    this.vehicle = new Vehicle(this.physics.world, this.carType);
     this.vehicle.setTerrain(this.terrain);
     this.scene.add(this.vehicle.model.group);
     this.scene.add(this.vehicle.wheelGroup);
@@ -138,22 +155,32 @@ export class CybertruckGame {
     // Always poll input (needed for gamepad menu/pause support)
     this.input.poll();
 
-    // Gamepad Start/A button starts the game from menu
+    // === MENU (start screen) ===
     if (this.state === GameState.MENU) {
-      if (this.input.actions.start || this.input.actions.reset) {
+      // Left/right to cycle car selection
+      if (this.input.actions.menuLeft || this.input.actions.menuRight) {
+        const currentIdx = CAR_TYPES.indexOf(this.carType);
+        const dir = this.input.actions.menuLeft ? -1 : 1;
+        const newIdx = (currentIdx + dir + CAR_TYPES.length) % CAR_TYPES.length;
+        this.setCarType(CAR_TYPES[newIdx]);
+        this.callbacks.onStartCarChange?.(newIdx);
+      }
+      // A button or Start → begin game
+      if (this.input.actions.menuSelect || this.input.actions.start) {
         this.start();
       }
     }
 
-    // Gamepad Start button toggles pause
+    // === PLAYING ===
     if (this.state === GameState.PLAYING && this.input.actions.start) {
       this.pause();
-    } else if (this.state === GameState.PAUSED && this.input.actions.start) {
-      this.resume();
     }
 
-    // Gamepad pause menu navigation
+    // === PAUSED ===
     if (this.state === GameState.PAUSED) {
+      if (this.input.actions.start || this.input.actions.menuBack) {
+        this.resume();
+      }
       if (this.input.actions.menuUp) {
         this.pauseMenuIndex = (this.pauseMenuIndex - 1 + CybertruckGame.PAUSE_MENU_ITEMS) % CybertruckGame.PAUSE_MENU_ITEMS;
         this.callbacks.onMenuIndexChange?.(this.pauseMenuIndex);
@@ -164,7 +191,31 @@ export class CybertruckGame {
       }
       if (this.input.actions.menuSelect) {
         if (this.pauseMenuIndex === 0) this.resume();
-        else if (this.pauseMenuIndex === 1) this.regenerateWorld();
+        else if (this.pauseMenuIndex === 1) this.enterCarPicker();
+        else if (this.pauseMenuIndex === 2) this.regenerateWorld();
+      }
+    }
+
+    // === CAR PICKER ===
+    if (this.state === GameState.CAR_PICKER) {
+      if (this.input.actions.menuBack || this.input.actions.start) {
+        this.backFromCarPicker();
+      }
+      if (this.input.actions.menuUp) {
+        this.carPickerIndex = (this.carPickerIndex - 1 + CybertruckGame.CAR_PICKER_ITEMS) % CybertruckGame.CAR_PICKER_ITEMS;
+        this.callbacks.onCarPickerIndexChange?.(this.carPickerIndex);
+      }
+      if (this.input.actions.menuDown) {
+        this.carPickerIndex = (this.carPickerIndex + 1) % CybertruckGame.CAR_PICKER_ITEMS;
+        this.callbacks.onCarPickerIndexChange?.(this.carPickerIndex);
+      }
+      if (this.input.actions.menuSelect) {
+        if (this.carPickerIndex < CAR_TYPES.length) {
+          this.selectCarFromPicker(CAR_TYPES[this.carPickerIndex]);
+        } else {
+          // Back button
+          this.backFromCarPicker();
+        }
       }
     }
 
@@ -206,6 +257,14 @@ export class CybertruckGame {
     this.renderer.render(this.scene, this.chaseCamera.camera);
   }
 
+  /** Set car type before starting (called from menu) */
+  setCarType(carType: CarType) {
+    this.carType = carType;
+    // Rebuild the world with the new car
+    this.clearScene();
+    this.buildWorld();
+  }
+
   start() {
     this.evSound.init();
     this.collisionSound.init(this.vehicle.chassisBody);
@@ -239,6 +298,30 @@ export class CybertruckGame {
     this.collisionSound = new CollisionSound();
     this.collisionSound.init(this.vehicle.chassisBody);
     this.resume();
+  }
+
+  enterCarPicker() {
+    this.state = GameState.CAR_PICKER;
+    this.carPickerIndex = 0;
+    this.callbacks.onStateChange(GameState.CAR_PICKER);
+    this.callbacks.onCarPickerIndexChange?.(0);
+  }
+
+  selectCarFromPicker(carType: CarType) {
+    this.collisionSound.dispose();
+    this.carType = carType;
+    this.clearScene();
+    this.buildWorld();
+    this.collisionSound = new CollisionSound();
+    this.collisionSound.init(this.vehicle.chassisBody);
+    this.resume();
+  }
+
+  backFromCarPicker() {
+    this.state = GameState.PAUSED;
+    this.pauseMenuIndex = 0;
+    this.callbacks.onStateChange(GameState.PAUSED);
+    this.callbacks.onMenuIndexChange?.(0);
   }
 
   private handleResize() {
