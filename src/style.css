@@ -118,6 +118,10 @@ body {
   transform: scale(0.97);
 }
 
+.drive-btn + .drive-btn {
+  margin-top: 16px;
+}
+
 /* ===== CONTROLS INFO ===== */
 .controls-info {
   margin-top: 30px;

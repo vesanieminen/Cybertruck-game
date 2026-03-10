@@ -64,6 +64,7 @@ export const TRUCK_HEIGHT = 1.9;
 export const GameState = {
   MENU: 'MENU',
   PLAYING: 'PLAYING',
+  PAUSED: 'PAUSED',
 } as const;
 
 export type GameState = (typeof GameState)[keyof typeof GameState];

@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { noise2D } from './noise';
+import { seedNoise } from './noise';
 import {
   TERRAIN_SIZE,
   TERRAIN_SEGMENTS,
@@ -14,13 +14,14 @@ export class Terrain {
   public mesh: THREE.Mesh;
   public heightData: number[][];
 
-  constructor(scene: THREE.Scene) {
-    this.heightData = this.generateHeightmap();
+  constructor(scene: THREE.Scene, seed: number) {
+    this.heightData = this.generateHeightmap(seed);
     this.mesh = this.createMesh();
     scene.add(this.mesh);
   }
 
-  private generateHeightmap(): number[][] {
+  private generateHeightmap(seed: number): number[][] {
+    const noise = seedNoise(seed);
     const data: number[][] = [];
     const halfSize = TERRAIN_SIZE / 2;
     const step = TERRAIN_SIZE / (TERRAIN_SEGMENTS - 1);
@@ -36,7 +37,7 @@ export class Terrain {
         let amplitude = 1;
         let frequency = TERRAIN_NOISE_SCALE;
         for (let o = 0; o < TERRAIN_NOISE_OCTAVES; o++) {
-          height += noise2D(worldX * frequency, worldZ * frequency) * amplitude;
+          height += noise(worldX * frequency, worldZ * frequency) * amplitude;
           amplitude *= 0.5;
           frequency *= 2;
         }

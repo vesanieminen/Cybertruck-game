@@ -1,12 +1,16 @@
 import * as THREE from 'three';
 import * as CANNON from 'cannon-es';
 import { COLORS, TERRAIN_SIZE, TREE_COUNT, ROCK_COUNT } from './constants';
+import { mulberry32 } from './noise';
 import type { Terrain } from './Terrain';
 
 export class NatureEnvironment {
   public sunLight: THREE.DirectionalLight;
 
-  constructor(scene: THREE.Scene, terrain: Terrain, world: CANNON.World) {
+  private rng: () => number;
+
+  constructor(scene: THREE.Scene, terrain: Terrain, world: CANNON.World, seed: number) {
+    this.rng = mulberry32(seed + 7919); // offset from terrain seed
     this.sunLight = this.createLighting(scene);
     this.createSky(scene);
     this.createTrees(scene, terrain, world);
@@ -88,17 +92,17 @@ export class NatureEnvironment {
     for (let i = 0; i < TREE_COUNT; i++) {
       let x: number, z: number;
       do {
-        x = (Math.random() - 0.5) * TERRAIN_SIZE * 0.85;
-        z = (Math.random() - 0.5) * TERRAIN_SIZE * 0.85;
+        x = (this.rng() - 0.5) * TERRAIN_SIZE * 0.85;
+        z = (this.rng() - 0.5) * TERRAIN_SIZE * 0.85;
       } while (Math.sqrt(x * x + z * z) < 40);
 
       const y = terrain.getHeightAt(x, z);
-      const scale = 0.7 + Math.random() * 0.8;
+      const scale = 0.7 + this.rng() * 0.8;
 
       // Trunk
       dummy.position.set(x, y + 1 * scale, z);
       dummy.scale.set(scale, scale, scale);
-      dummy.rotation.set(0, Math.random() * Math.PI * 2, 0);
+      dummy.rotation.set(0, this.rng() * Math.PI * 2, 0);
       dummy.updateMatrix();
       trunkInstances.setMatrixAt(i, dummy.matrix);
 
@@ -132,9 +136,9 @@ export class NatureEnvironment {
     for (let i = 0; i < positions.count; i++) {
       positions.setXYZ(
         i,
-        positions.getX(i) * (0.8 + Math.random() * 0.4),
-        positions.getY(i) * (0.6 + Math.random() * 0.4),
-        positions.getZ(i) * (0.8 + Math.random() * 0.4)
+        positions.getX(i) * (0.8 + this.rng() * 0.4),
+        positions.getY(i) * (0.6 + this.rng() * 0.4),
+        positions.getZ(i) * (0.8 + this.rng() * 0.4)
       );
     }
     rockGeo.computeVertexNormals();
@@ -149,16 +153,16 @@ export class NatureEnvironment {
     for (let i = 0; i < ROCK_COUNT; i++) {
       let x: number, z: number;
       do {
-        x = (Math.random() - 0.5) * TERRAIN_SIZE * 0.85;
-        z = (Math.random() - 0.5) * TERRAIN_SIZE * 0.85;
+        x = (this.rng() - 0.5) * TERRAIN_SIZE * 0.85;
+        z = (this.rng() - 0.5) * TERRAIN_SIZE * 0.85;
       } while (Math.sqrt(x * x + z * z) < 35);
 
       const y = terrain.getHeightAt(x, z);
-      const scale = 0.3 + Math.random() * 1.5;
+      const scale = 0.3 + this.rng() * 1.5;
 
       dummy.position.set(x, y + scale * 0.3, z);
       dummy.scale.set(scale, scale * 0.7, scale);
-      dummy.rotation.set(Math.random(), Math.random(), Math.random());
+      dummy.rotation.set(this.rng(), this.rng(), this.rng());
       dummy.updateMatrix();
       rockInstances.setMatrixAt(i, dummy.matrix);
 
