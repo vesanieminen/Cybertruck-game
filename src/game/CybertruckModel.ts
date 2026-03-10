@@ -21,8 +21,9 @@ export class CybertruckModel {
   private async loadModel() {
     let model: THREE.Object3D | null = null;
 
-    model = await this.tryLoadGLB('/models/tesla-cybertruck.glb');
-    if (!model) model = await this.tryLoadFBX('/models/tesla-cybertruck.fbx');
+    const base = import.meta.env.BASE_URL;
+    model = await this.tryLoadGLB(`${base}models/tesla-cybertruck.glb`);
+    if (!model) model = await this.tryLoadFBX(`${base}models/tesla-cybertruck.fbx`);
 
     if (model) {
       this.integrateModel(model);
