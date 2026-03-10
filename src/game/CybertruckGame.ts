@@ -98,8 +98,23 @@ export class CybertruckGame {
   private renderLoop() {
     this.animationFrameId = requestAnimationFrame(() => this.renderLoop());
 
+    // Always poll input (needed for gamepad menu support)
+    this.input.poll();
+
+    // Gamepad Start/A button starts the game from menu
+    if (this.state === GameState.MENU) {
+      if (this.input.actions.start || this.input.actions.reset) {
+        this.start();
+      }
+    }
+
     if (this.state === GameState.PLAYING) {
       const delta = Math.min(this.clock.getDelta(), 0.05);
+
+      // Gamepad action buttons
+      if (this.input.actions.reset) this.vehicle.reset();
+      if (this.input.actions.debug) this.vehicle.cycleDebug();
+      if (this.input.actions.camera) this.chaseCamera.cycleMode();
 
       // Physics
       this.physics.step(delta);
