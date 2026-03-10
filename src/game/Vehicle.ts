@@ -33,17 +33,17 @@ export class Vehicle {
   public debugGroup: THREE.Group;
   private debugChassis: THREE.LineSegments;
   private debugWheels: THREE.Mesh[] = [];
-  private debugEnabled = false;
+  private debugMode = 0; // 0=off, 1=overlay, 2=colliders only
 
   private currentSteer = 0;
 
   constructor(world: CANNON.World) {
-    // Chassis physics body — centered at body origin
+    // Chassis physics body — compact so it doesn't scrape terrain on hills
     const chassisShape = new CANNON.Box(
       new CANNON.Vec3(
-        VEHICLE_CHASSIS_WIDTH / 2,
-        VEHICLE_CHASSIS_HEIGHT / 2,
-        VEHICLE_CHASSIS_LENGTH / 2
+        VEHICLE_CHASSIS_WIDTH / 2 - 0.3,
+        0.25,
+        VEHICLE_CHASSIS_LENGTH / 2 - 1.0
       )
     );
 
@@ -112,11 +112,11 @@ export class Vehicle {
     this.debugGroup = new THREE.Group();
     this.debugGroup.visible = false;
 
-    // Chassis wireframe box
+    // Chassis wireframe box (matches compact physics box)
     const chassisGeo = new THREE.BoxGeometry(
-      VEHICLE_CHASSIS_WIDTH,
-      VEHICLE_CHASSIS_HEIGHT,
-      VEHICLE_CHASSIS_LENGTH
+      VEHICLE_CHASSIS_WIDTH - 0.6,
+      0.5,
+      VEHICLE_CHASSIS_LENGTH - 2.0
     );
     const chassisEdges = new THREE.EdgesGeometry(chassisGeo);
     this.debugChassis = new THREE.LineSegments(
@@ -228,7 +228,7 @@ export class Vehicle {
     }
 
     // Update debug wireframes (these show TRUE physics positions)
-    if (this.debugGroup.visible) {
+    if (this.debugMode > 0) {
       this.debugChassis.position.set(pos.x, pos.y, pos.z);
       this.debugChassis.quaternion.set(quat.x, quat.y, quat.z, quat.w);
 
@@ -252,10 +252,13 @@ export class Vehicle {
     this.currentSteer = 0;
   }
 
-  toggleDebug(): boolean {
-    this.debugEnabled = !this.debugEnabled;
-    this.debugGroup.visible = this.debugEnabled;
-    return this.debugEnabled;
+  /** Cycle debug: 0=off, 1=wireframe overlay, 2=wireframe only (hide model) */
+  cycleDebug(): number {
+    this.debugMode = (this.debugMode + 1) % 3;
+    this.debugGroup.visible = this.debugMode > 0;
+    this.model.group.visible = this.debugMode !== 2;
+    this.wheelGroup.visible = this.debugMode !== 2;
+    return this.debugMode;
   }
 
   /** Signed forward speed in m/s (positive = forward, negative = backward) */

@@ -77,7 +77,7 @@ export class CybertruckGame {
     // Keyboard shortcuts
     window.addEventListener('keydown', (e) => {
       if (e.code === 'KeyG') {
-        this.vehicle.toggleDebug();
+        this.vehicle.cycleDebug();
       }
       if (e.code === 'KeyR') {
         this.vehicle.reset();
