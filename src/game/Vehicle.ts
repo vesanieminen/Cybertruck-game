@@ -2,6 +2,7 @@ import * as CANNON from 'cannon-es';
 import * as THREE from 'three';
 import { CybertruckModel } from './CybertruckModel';
 import type { InputState } from './InputHandler';
+import type { Terrain } from './Terrain';
 import {
   VEHICLE_MASS,
   VEHICLE_CHASSIS_WIDTH,
@@ -36,6 +37,7 @@ export class Vehicle {
   private debugMode = 0; // 0=off, 1=overlay, 2=colliders only
 
   private currentSteer = 0;
+  private terrain: Terrain | null = null;
 
   constructor(world: CANNON.World) {
     // Chassis physics body — compact so it doesn't scrape terrain on hills
@@ -191,8 +193,25 @@ export class Vehicle {
       this.raycastVehicle.setBrake(brakeForce, i);
     }
 
+    // Safety: detect fall-through and recover
+    if (this.terrain) {
+      const pos = this.chassisBody.position;
+      const groundY = this.terrain.getHeightAt(pos.x, pos.z);
+      if (pos.y < groundY - 5) {
+        this.chassisBody.position.set(pos.x, groundY + 4, pos.z);
+        this.chassisBody.velocity.set(0, 0, 0);
+        this.chassisBody.angularVelocity.set(0, 0, 0);
+        this.chassisBody.quaternion.set(0, 0, 0, 1);
+      }
+    }
+
     // Sync visual to physics
     this.syncVisual();
+  }
+
+  /** Set terrain reference for fall-through detection */
+  setTerrain(terrain: Terrain) {
+    this.terrain = terrain;
   }
 
   // Visual model offset: chassis center is wheelRadius + suspensionRest + chassisHalfHeight above ground

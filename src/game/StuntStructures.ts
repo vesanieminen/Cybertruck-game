@@ -1,5 +1,7 @@
 import * as THREE from 'three';
 import * as CANNON from 'cannon-es';
+import { mulberry32 } from './noise';
+import { TERRAIN_SIZE } from './constants';
 import type { Terrain } from './Terrain';
 
 const STUNT_COLOR = 0xe88020;
@@ -10,39 +12,98 @@ export class StuntStructures {
   private pillarMat: THREE.MeshLambertMaterial;
   private groundMaterial: CANNON.Material;
 
-  constructor(scene: THREE.Scene, terrain: Terrain, world: CANNON.World, groundMaterial: CANNON.Material) {
+  constructor(scene: THREE.Scene, terrain: Terrain, world: CANNON.World, groundMaterial: CANNON.Material, seed: number) {
     this.mat = new THREE.MeshLambertMaterial({ color: STUNT_COLOR, flatShading: true, side: THREE.DoubleSide });
     this.pillarMat = new THREE.MeshLambertMaterial({ color: PILLAR_COLOR, flatShading: true });
     this.groundMaterial = groundMaterial;
 
-    // Small jump ramps near spawn
-    this.addRamp(scene, world, terrain, 70, 50, 0, 6, 10, 2.5);
-    this.addRamp(scene, world, terrain, -60, 70, Math.PI * 0.5, 6, 10, 2.5);
-    this.addRamp(scene, world, terrain, 50, -80, Math.PI * 1.0, 6, 10, 2.5);
+    const rng = mulberry32(seed + 31337);
+    const range = TERRAIN_SIZE * 0.4; // keep within inner 80% of terrain
+    const minDist = 50; // minimum distance from spawn
 
-    // Medium ramps
-    this.addRamp(scene, world, terrain, 150, 100, Math.PI * 0.2, 7, 14, 4);
-    this.addRamp(scene, world, terrain, -120, -150, Math.PI * 0.7, 7, 14, 4);
+    const randPos = (): [number, number] => {
+      let x: number, z: number;
+      do {
+        x = (rng() - 0.5) * range * 2;
+        z = (rng() - 0.5) * range * 2;
+      } while (Math.sqrt(x * x + z * z) < minDist);
+      return [x, z];
+    };
 
-    // Big jump ramp
-    this.addRamp(scene, world, terrain, 200, -50, Math.PI * 0.1, 8, 20, 6);
+    const randAngle = () => rng() * Math.PI * 2;
 
-    // Mega ramp
-    this.addRamp(scene, world, terrain, -250, 0, Math.PI * 0.5, 10, 30, 10);
+    // --- Small ramps (5–12) ---
+    const smallRampCount = 5 + Math.floor(rng() * 8);
+    for (let i = 0; i < smallRampCount; i++) {
+      const [x, z] = randPos();
+      const w = 5 + rng() * 3;
+      const l = 8 + rng() * 6;
+      const h = 1.5 + rng() * 2;
+      this.addRamp(scene, world, terrain, x, z, randAngle(), w, l, h);
+    }
 
-    // Elevated platforms with ramp access
-    this.addPlatform(scene, world, terrain, -180, 200, Math.PI * 0.25, 10, 15, 6);
-    this.addPlatform(scene, world, terrain, 250, 150, Math.PI * 0.8, 12, 18, 8);
+    // --- Medium ramps (2–6) ---
+    const medRampCount = 2 + Math.floor(rng() * 5);
+    for (let i = 0; i < medRampCount; i++) {
+      const [x, z] = randPos();
+      const w = 6 + rng() * 3;
+      const l = 12 + rng() * 8;
+      const h = 3 + rng() * 3;
+      this.addRamp(scene, world, terrain, x, z, randAngle(), w, l, h);
+    }
 
-    // Half-pipe
-    this.addHalfPipe(scene, world, terrain, 0, -200, 0, 20, 30, 6);
+    // --- Big ramps (1–3) ---
+    const bigRampCount = 1 + Math.floor(rng() * 3);
+    for (let i = 0; i < bigRampCount; i++) {
+      const [x, z] = randPos();
+      const w = 8 + rng() * 4;
+      const l = 18 + rng() * 15;
+      const h = 6 + rng() * 5;
+      this.addRamp(scene, world, terrain, x, z, randAngle(), w, l, h);
+    }
 
-    // Spiral ramp tower
-    this.addSpiralTower(scene, world, terrain, 300, 0);
+    // --- Sequential jump sets (0–3) ---
+    const seqCount = Math.floor(rng() * 4);
+    for (let s = 0; s < seqCount; s++) {
+      const [sx, sz] = randPos();
+      const dir = randAngle();
+      const jumpCount = 3 + Math.floor(rng() * 5);
+      const spacing = 20 + rng() * 10;
+      for (let i = 0; i < jumpCount; i++) {
+        const jx = sx + Math.sin(dir) * i * spacing;
+        const jz = sz + Math.cos(dir) * i * spacing;
+        const w = 5 + rng() * 2;
+        const l = 6 + rng() * 4;
+        const h = 1.5 + i * (0.3 + rng() * 0.4);
+        this.addRamp(scene, world, terrain, jx, jz, dir, w, l, h);
+      }
+    }
 
-    // Sequential jumps (motocross-style)
-    for (let i = 0; i < 5; i++) {
-      this.addRamp(scene, world, terrain, -80 + i * 25, -300, 0, 6, 8, 2 + i * 0.5);
+    // --- Elevated platforms (1–4) ---
+    const platCount = 1 + Math.floor(rng() * 4);
+    for (let i = 0; i < platCount; i++) {
+      const [x, z] = randPos();
+      const w = 8 + rng() * 6;
+      const l = 12 + rng() * 10;
+      const h = 4 + rng() * 6;
+      this.addPlatform(scene, world, terrain, x, z, randAngle(), w, l, h);
+    }
+
+    // --- Half-pipes (0–3) ---
+    const pipeCount = Math.floor(rng() * 4);
+    for (let i = 0; i < pipeCount; i++) {
+      const [x, z] = randPos();
+      const w = 15 + rng() * 10;
+      const l = 20 + rng() * 20;
+      const h = 4 + rng() * 4;
+      this.addHalfPipe(scene, world, terrain, x, z, randAngle(), w, l, h);
+    }
+
+    // --- Spiral towers (0–2) ---
+    const spiralCount = Math.floor(rng() * 3);
+    for (let i = 0; i < spiralCount; i++) {
+      const [x, z] = randPos();
+      this.addSpiralTower(scene, world, terrain, x, z, rng);
     }
   }
 
@@ -53,21 +114,17 @@ export class StuntStructures {
   ) {
     const y = terrain.getHeightAt(x, z);
 
-    // Wedge: 6 vertices
-    // 0: back-bottom-left, 1: back-bottom-right
-    // 2: front-bottom-left, 3: front-bottom-right
-    // 4: back-top-left, 5: back-top-right
     const vertices = new Float32Array([
       -width / 2, 0, 0,       width / 2, 0, 0,
       -width / 2, 0, length,   width / 2, 0, length,
       -width / 2, height, 0,   width / 2, height, 0,
     ]);
     const indices = [
-      0, 1, 3, 3, 2, 0,   // bottom
-      4, 2, 3, 3, 5, 4,   // ramp slope
-      1, 0, 4, 4, 5, 1,   // back wall
-      0, 2, 4,             // left triangle
-      1, 5, 3,             // right triangle
+      0, 1, 3, 3, 2, 0,
+      4, 2, 3, 3, 5, 4,
+      1, 0, 4, 4, 5, 1,
+      0, 2, 4,
+      1, 5, 3,
     ];
 
     const geo = new THREE.BufferGeometry();
@@ -82,7 +139,6 @@ export class StuntStructures {
     mesh.receiveShadow = true;
     scene.add(mesh);
 
-    // Physics: ConvexPolyhedron (full collision support, unlike Trimesh)
     const convexVerts = [
       new CANNON.Vec3(-width / 2, 0, 0),
       new CANNON.Vec3(width / 2, 0, 0),
@@ -92,11 +148,11 @@ export class StuntStructures {
       new CANNON.Vec3(width / 2, height, 0),
     ];
     const convexFaces = [
-      [0, 1, 3, 2], // bottom (-Y)
-      [4, 2, 3, 5], // slope (up-forward)
-      [1, 0, 4, 5], // back wall (-Z)
-      [0, 2, 4],    // left (-X)
-      [1, 5, 3],    // right (+X)
+      [0, 1, 3, 2],
+      [4, 2, 3, 5],
+      [1, 0, 4, 5],
+      [0, 2, 4],
+      [1, 5, 3],
     ];
     const shape = new CANNON.ConvexPolyhedron({ vertices: convexVerts, faces: convexFaces });
     const body = new CANNON.Body({ mass: 0, material: this.groundMaterial });
@@ -165,7 +221,6 @@ export class StuntStructures {
     const vertices: number[] = [];
     const indices: number[] = [];
 
-    // Half-pipe: U-shaped cross-section extruded along length
     for (let i = 0; i <= segments; i++) {
       const angle = (i / segments) * Math.PI;
       const cx = Math.cos(angle) * (width / 2);
@@ -195,7 +250,6 @@ export class StuntStructures {
     mesh.receiveShadow = true;
     scene.add(mesh);
 
-    // Physics: use Box segments to approximate the U shape (Trimesh has poor collision)
     for (let i = 0; i < segments; i++) {
       const angle0 = (i / segments) * Math.PI;
       const angle1 = ((i + 1) / segments) * Math.PI;
@@ -204,7 +258,6 @@ export class StuntStructures {
       const cx = Math.cos(midAngle) * (width / 2);
       const cy = Math.sin(midAngle) * height;
 
-      // Each segment is a thin tilted box
       const segWidth = Math.sqrt(
         Math.pow(Math.cos(angle1) - Math.cos(angle0), 2) +
         Math.pow(Math.sin(angle1) - Math.sin(angle0), 2)
@@ -215,8 +268,7 @@ export class StuntStructures {
       const segBody = new CANNON.Body({ mass: 0, material: this.groundMaterial });
       segBody.addShape(boxShape);
 
-      // Rotate the segment to match the curve
-      const tilt = midAngle - Math.PI / 2; // rotation around Z
+      const tilt = midAngle - Math.PI / 2;
       const q = new CANNON.Quaternion();
       q.setFromEuler(0, yRot, 0);
       const q2 = new CANNON.Quaternion();
@@ -224,7 +276,6 @@ export class StuntStructures {
       q.mult(q2, q);
       segBody.quaternion.copy(q);
 
-      // Position in world space
       const localX = cx;
       const localY = cy;
       const cosR = Math.cos(yRot);
@@ -240,14 +291,14 @@ export class StuntStructures {
 
   private addSpiralTower(
     scene: THREE.Scene, world: CANNON.World, terrain: Terrain,
-    x: number, z: number
+    x: number, z: number, rng: () => number
   ) {
     const y = terrain.getHeightAt(x, z);
-    const radius = 20;
-    const trackWidth = 8;
-    const turns = 2;
-    const totalHeight = 25;
-    const segments = turns * 24;
+    const radius = 15 + rng() * 10;
+    const trackWidth = 6 + rng() * 4;
+    const turns = 1.5 + rng() * 1.5;
+    const totalHeight = 15 + rng() * 15;
+    const segments = Math.floor(turns * 24);
     const vertices: number[] = [];
     const indices: number[] = [];
 
@@ -287,7 +338,6 @@ export class StuntStructures {
     mesh.receiveShadow = true;
     scene.add(mesh);
 
-    // Physics: Box segments along the spiral track
     for (let i = 0; i < segments; i++) {
       const t0 = i / segments;
       const t1 = (i + 1) / segments;
@@ -300,7 +350,6 @@ export class StuntStructures {
       const cx = Math.cos(angleMid) * radius;
       const cz = Math.sin(angleMid) * radius;
 
-      // Segment length along the arc
       const dx = Math.cos(angle1) * radius - Math.cos(angle0) * radius;
       const dz = Math.sin(angle1) * radius - Math.sin(angle0) * radius;
       const dh = (t1 - t0) * totalHeight;
@@ -310,7 +359,6 @@ export class StuntStructures {
       const segBody = new CANNON.Body({ mass: 0, material: this.groundMaterial });
       segBody.addShape(boxShape);
 
-      // The segment tangent direction
       const tangentX = -Math.sin(angleMid);
       const tangentZ = Math.cos(angleMid);
       const yawAngle = Math.atan2(tangentX, tangentZ);
@@ -330,7 +378,6 @@ export class StuntStructures {
     pillar.castShadow = true;
     scene.add(pillar);
 
-    // Central pillar physics
     const pillarShape = new CANNON.Cylinder(1.5, 1.5, totalHeight, 8);
     const pillarBody = new CANNON.Body({ mass: 0, material: this.groundMaterial });
     pillarBody.addShape(pillarShape);
@@ -340,16 +387,17 @@ export class StuntStructures {
     // Entry ramp at the base
     const entryX = x + Math.cos(0) * (radius + 15);
     const entryZ = z + Math.sin(0) * (radius + 15);
-    this.addRamp(scene, world, terrain, entryX, entryZ, Math.PI, 8, 15, 1);
+    this.addRamp(scene, world, terrain, entryX, entryZ, Math.PI, trackWidth, 15, 1);
 
     // Launch ramp at the top
     const topAngle = turns * Math.PI * 2;
     const topX = x + Math.cos(topAngle) * radius;
     const topZ = z + Math.sin(topAngle) * radius;
+    const tw = trackWidth;
     const launchVerts = new Float32Array([
-      -trackWidth / 2, 0, 0,      trackWidth / 2, 0, 0,
-      -trackWidth / 2, 0, 8,      trackWidth / 2, 0, 8,
-      -trackWidth / 2, 4, 0,      trackWidth / 2, 4, 0,
+      -tw / 2, 0, 0,      tw / 2, 0, 0,
+      -tw / 2, 0, 8,      tw / 2, 0, 8,
+      -tw / 2, 4, 0,      tw / 2, 4, 0,
     ]);
     const launchIdx = [
       0, 1, 3, 3, 2, 0,
@@ -370,8 +418,6 @@ export class StuntStructures {
     launchMesh.castShadow = true;
     scene.add(launchMesh);
 
-    // Launch ramp physics (ConvexPolyhedron)
-    const tw = trackWidth;
     const launchConvexVerts = [
       new CANNON.Vec3(-tw / 2, 0, 0),
       new CANNON.Vec3(tw / 2, 0, 0),

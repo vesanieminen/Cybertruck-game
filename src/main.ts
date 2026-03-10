@@ -11,6 +11,8 @@ const pauseScreen = document.getElementById('pause-screen')!;
 const resumeBtn = document.getElementById('resume-btn')!;
 const newWorldBtn = document.getElementById('new-world-btn')!;
 
+const pauseButtons = [resumeBtn, newWorldBtn];
+
 const game = new CybertruckGame(container, {
   onSpeedUpdate(kmh) {
     speedValue.textContent = String(kmh);
@@ -24,6 +26,11 @@ const game = new CybertruckGame(container, {
       pauseScreen.classList.remove('hidden');
       hud.classList.add('hidden');
     }
+  },
+  onMenuIndexChange(index) {
+    pauseButtons.forEach((btn, i) => {
+      btn.classList.toggle('focused', i === index);
+    });
   },
 });
 

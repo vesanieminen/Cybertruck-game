@@ -11,6 +11,9 @@ export interface ActionEvents {
   debug: boolean;
   camera: boolean;
   start: boolean;
+  menuUp: boolean;
+  menuDown: boolean;
+  menuSelect: boolean;
 }
 
 const GAMEPAD_DEADZONE = 0.15;
@@ -29,6 +32,9 @@ export class InputHandler {
     debug: false,
     camera: false,
     start: false,
+    menuUp: false,
+    menuDown: false,
+    menuSelect: false,
   };
 
   // Keyboard state tracked separately so gamepad can be OR'd in
@@ -41,6 +47,7 @@ export class InputHandler {
 
   // Track previous gamepad button state for edge detection
   private prevGamepadButtons: boolean[] = [];
+  private prevStickY = 0;
 
   private boundKeyDown: (e: KeyboardEvent) => void;
   private boundKeyUp: (e: KeyboardEvent) => void;
@@ -101,6 +108,9 @@ export class InputHandler {
     this.actions.debug = false;
     this.actions.camera = false;
     this.actions.start = false;
+    this.actions.menuUp = false;
+    this.actions.menuDown = false;
+    this.actions.menuSelect = false;
 
     // Start from keyboard
     let left = this.keyState.left;
@@ -140,10 +150,23 @@ export class InputHandler {
       if (this.buttonJustPressed(gp, 2)) this.actions.debug = true;
       // Right bumper (button 5 / R1) → camera cycle
       if (this.buttonJustPressed(gp, 5)) this.actions.camera = true;
-      // Start button (button 9) → start game / camera cycle
+      // Start button (button 9) → start game / pause toggle
       if (this.buttonJustPressed(gp, 9)) this.actions.start = true;
       // Select/Back button (button 8) → reset
       if (this.buttonJustPressed(gp, 8)) this.actions.reset = true;
+
+      // Menu navigation (D-pad up/down + left stick Y + A button to select)
+      if (this.buttonJustPressed(gp, 12)) this.actions.menuUp = true;   // D-pad up
+      if (this.buttonJustPressed(gp, 13)) this.actions.menuDown = true; // D-pad down
+      if (this.buttonJustPressed(gp, 0)) this.actions.menuSelect = true; // A button
+
+      // Left stick Y-axis (axis 1) for menu navigation
+      const stickY = gp.axes[1] ?? 0;
+      const prevStickUp = (this.prevStickY ?? 0) > -0.5;
+      const prevStickDown = (this.prevStickY ?? 0) < 0.5;
+      if (stickY < -0.5 && prevStickUp) this.actions.menuUp = true;
+      if (stickY > 0.5 && prevStickDown) this.actions.menuDown = true;
+      this.prevStickY = stickY;
 
       // Save current button state for next frame edge detection
       this.prevGamepadButtons = [];

@@ -72,4 +72,5 @@ export type GameState = (typeof GameState)[keyof typeof GameState];
 export interface GameCallbacks {
   onSpeedUpdate: (speedKmh: number) => void;
   onStateChange: (state: GameState) => void;
+  onMenuIndexChange?: (index: number) => void;
 }

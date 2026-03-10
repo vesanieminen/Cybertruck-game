@@ -108,7 +108,8 @@ body {
   text-transform: uppercase;
 }
 
-.drive-btn:hover {
+.drive-btn:hover,
+.drive-btn.focused {
   color: #1a2a3a;
   background: #fff;
   box-shadow: 0 0 20px rgba(255, 255, 255, 0.3);

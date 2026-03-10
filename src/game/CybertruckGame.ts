@@ -31,6 +31,8 @@ export class CybertruckGame {
   private state: GameState = GameState.MENU;
   private callbacks: GameCallbacks;
   private seed: number;
+  private pauseMenuIndex = 0;
+  private static readonly PAUSE_MENU_ITEMS = 2; // Resume, New World
 
   constructor(container: HTMLElement, callbacks: GameCallbacks) {
     this.container = container;
@@ -100,6 +102,7 @@ export class CybertruckGame {
 
     // Vehicle
     this.vehicle = new Vehicle(this.physics.world);
+    this.vehicle.setTerrain(this.terrain);
     this.scene.add(this.vehicle.model.group);
     this.scene.add(this.vehicle.wheelGroup);
     this.scene.add(this.vehicle.debugGroup);
@@ -108,7 +111,7 @@ export class CybertruckGame {
     this.environment = new NatureEnvironment(this.scene, this.terrain, this.physics.world, this.seed);
 
     // Stunt structures
-    new StuntStructures(this.scene, this.terrain, this.physics.world, this.physics.groundMaterial);
+    new StuntStructures(this.scene, this.terrain, this.physics.world, this.physics.groundMaterial, this.seed);
   }
 
   private clearScene() {
@@ -147,6 +150,22 @@ export class CybertruckGame {
       this.pause();
     } else if (this.state === GameState.PAUSED && this.input.actions.start) {
       this.resume();
+    }
+
+    // Gamepad pause menu navigation
+    if (this.state === GameState.PAUSED) {
+      if (this.input.actions.menuUp) {
+        this.pauseMenuIndex = (this.pauseMenuIndex - 1 + CybertruckGame.PAUSE_MENU_ITEMS) % CybertruckGame.PAUSE_MENU_ITEMS;
+        this.callbacks.onMenuIndexChange?.(this.pauseMenuIndex);
+      }
+      if (this.input.actions.menuDown) {
+        this.pauseMenuIndex = (this.pauseMenuIndex + 1) % CybertruckGame.PAUSE_MENU_ITEMS;
+        this.callbacks.onMenuIndexChange?.(this.pauseMenuIndex);
+      }
+      if (this.input.actions.menuSelect) {
+        if (this.pauseMenuIndex === 0) this.resume();
+        else if (this.pauseMenuIndex === 1) this.regenerateWorld();
+      }
     }
 
     if (this.state === GameState.PLAYING) {
@@ -199,7 +218,9 @@ export class CybertruckGame {
     this.state = GameState.PAUSED;
     this.clock.stop();
     this.evSound.mute();
+    this.pauseMenuIndex = 0;
     this.callbacks.onStateChange(GameState.PAUSED);
+    this.callbacks.onMenuIndexChange?.(0);
   }
 
   resume() {
