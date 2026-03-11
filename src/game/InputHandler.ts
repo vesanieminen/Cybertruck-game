@@ -145,13 +145,9 @@ export class InputHandler {
 
       // Right trigger (button 7 / R2) → accelerate
       if (gp.buttons[7]?.pressed || (gp.buttons[7]?.value ?? 0) > 0.1) accelerate = true;
-      // A button (button 0) → accelerate
-      if (gp.buttons[0]?.pressed) accelerate = true;
 
       // Left trigger (button 6 / L2) → brake
       if (gp.buttons[6]?.pressed || (gp.buttons[6]?.value ?? 0) > 0.1) brake = true;
-      // B button (button 1) → brake
-      if (gp.buttons[1]?.pressed) brake = true;
 
       // Action buttons (one-shot, edge-detected)
       // Y button (button 3) → reset

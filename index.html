@@ -23,6 +23,7 @@
       <h1 class="title">PAUSED</h1>
       <button id="resume-btn" class="drive-btn pause-menu-item">RESUME</button>
       <button id="switch-car-btn" class="drive-btn pause-menu-item">SWITCH CAR</button>
+      <button id="switch-world-btn" class="drive-btn pause-menu-item">SWITCH WORLD</button>
       <button id="new-world-btn" class="drive-btn pause-menu-item">NEW WORLD</button>
     </div>
 
@@ -34,6 +35,20 @@
       <button id="car-picker-back-btn" class="drive-btn">BACK</button>
     </div>
 
+    <!-- World Picker (from pause menu) -->
+    <div id="world-picker-screen" class="overlay hidden">
+      <h1 class="title">CHOOSE WORLD</h1>
+      <button class="drive-btn world-pick-option" data-world="countryside">COUNTRYSIDE</button>
+      <button class="drive-btn world-pick-option" data-world="downtown">DOWNTOWN</button>
+      <button class="drive-btn world-pick-option" data-world="suburbs">SUBURBS</button>
+      <button class="drive-btn world-pick-option" data-world="stunt-arena">STUNT ARENA</button>
+      <button class="drive-btn world-pick-option" data-world="snow-peaks">SNOW PEAKS</button>
+      <button class="drive-btn world-pick-option" data-world="mountain-pass">MOUNTAIN PASS</button>
+      <button class="drive-btn world-pick-option" data-world="desert">DESERT</button>
+      <button class="drive-btn world-pick-option" data-world="coastal">COASTAL</button>
+      <button id="world-picker-back-btn" class="drive-btn">BACK</button>
+    </div>
+
     <!-- Start Screen -->
     <div id="start-screen" class="overlay">
       <h1 class="title" data-text="CYBERTRUCK">CYBERTRUCK</h1>
@@ -42,6 +57,17 @@
       <div id="car-selector">
         <button class="car-option selected" data-car="cybertruck">CYBERTRUCK</button>
         <button class="car-option" data-car="model-s">MODEL S</button>
+      </div>
+
+      <div id="world-selector">
+        <button class="world-option selected" data-world="countryside">COUNTRYSIDE</button>
+        <button class="world-option" data-world="downtown">DOWNTOWN</button>
+        <button class="world-option" data-world="suburbs">SUBURBS</button>
+        <button class="world-option" data-world="stunt-arena">STUNT ARENA</button>
+        <button class="world-option" data-world="snow-peaks">SNOW PEAKS</button>
+        <button class="world-option" data-world="mountain-pass">MOUNTAIN PASS</button>
+        <button class="world-option" data-world="desert">DESERT</button>
+        <button class="world-option" data-world="coastal">COASTAL</button>
       </div>
 
       <button id="start-btn" class="drive-btn">DRIVE</button>

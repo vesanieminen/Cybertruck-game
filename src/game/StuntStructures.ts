@@ -1,7 +1,6 @@
 import * as THREE from 'three';
 import * as CANNON from 'cannon-es';
 import { mulberry32 } from './noise';
-import { TERRAIN_SIZE } from './constants';
 import type { Terrain } from './Terrain';
 
 const STUNT_COLOR = 0xe88020;
@@ -12,13 +11,18 @@ export class StuntStructures {
   private pillarMat: THREE.MeshLambertMaterial;
   private groundMaterial: CANNON.Material;
 
-  constructor(scene: THREE.Scene, terrain: Terrain, world: CANNON.World, groundMaterial: CANNON.Material, seed: number) {
+  constructor(
+    scene: THREE.Scene, terrain: Terrain, world: CANNON.World,
+    groundMaterial: CANNON.Material, seed: number,
+    stuntDensity = 1, terrainSize = 1500,
+  ) {
     this.mat = new THREE.MeshLambertMaterial({ color: STUNT_COLOR, flatShading: true, side: THREE.DoubleSide });
     this.pillarMat = new THREE.MeshLambertMaterial({ color: PILLAR_COLOR, flatShading: true });
     this.groundMaterial = groundMaterial;
 
     const rng = mulberry32(seed + 31337);
-    const range = TERRAIN_SIZE * 0.4; // keep within inner 80% of terrain
+    const range = terrainSize * 0.4; // keep within inner 80% of terrain
+    const d = stuntDensity; // multiplier for structure counts
     const minDist = 50; // minimum distance from spawn
 
     const randPos = (): [number, number] => {
@@ -32,8 +36,8 @@ export class StuntStructures {
 
     const randAngle = () => rng() * Math.PI * 2;
 
-    // --- Small ramps (5–12) ---
-    const smallRampCount = 5 + Math.floor(rng() * 8);
+    // --- Small ramps (5–12) × density ---
+    const smallRampCount = Math.round((5 + Math.floor(rng() * 8)) * d);
     for (let i = 0; i < smallRampCount; i++) {
       const [x, z] = randPos();
       const w = 5 + rng() * 3;
@@ -42,8 +46,8 @@ export class StuntStructures {
       this.addRamp(scene, world, terrain, x, z, randAngle(), w, l, h);
     }
 
-    // --- Medium ramps (2–6) ---
-    const medRampCount = 2 + Math.floor(rng() * 5);
+    // --- Medium ramps (2–6) × density ---
+    const medRampCount = Math.round((2 + Math.floor(rng() * 5)) * d);
     for (let i = 0; i < medRampCount; i++) {
       const [x, z] = randPos();
       const w = 6 + rng() * 3;
@@ -52,8 +56,8 @@ export class StuntStructures {
       this.addRamp(scene, world, terrain, x, z, randAngle(), w, l, h);
     }
 
-    // --- Big ramps (1–3) ---
-    const bigRampCount = 1 + Math.floor(rng() * 3);
+    // --- Big ramps (1–3) × density ---
+    const bigRampCount = Math.round((1 + Math.floor(rng() * 3)) * d);
     for (let i = 0; i < bigRampCount; i++) {
       const [x, z] = randPos();
       const w = 8 + rng() * 4;
@@ -62,8 +66,8 @@ export class StuntStructures {
       this.addRamp(scene, world, terrain, x, z, randAngle(), w, l, h);
     }
 
-    // --- Sequential jump sets (0–3) ---
-    const seqCount = Math.floor(rng() * 4);
+    // --- Sequential jump sets (0–3) × density ---
+    const seqCount = Math.round(Math.floor(rng() * 4) * d);
     for (let s = 0; s < seqCount; s++) {
       const [sx, sz] = randPos();
       const dir = randAngle();
@@ -79,8 +83,8 @@ export class StuntStructures {
       }
     }
 
-    // --- Elevated platforms (1–4) ---
-    const platCount = 1 + Math.floor(rng() * 4);
+    // --- Elevated platforms (1–4) × density ---
+    const platCount = Math.round((1 + Math.floor(rng() * 4)) * d);
     for (let i = 0; i < platCount; i++) {
       const [x, z] = randPos();
       const w = 8 + rng() * 6;
@@ -89,8 +93,8 @@ export class StuntStructures {
       this.addPlatform(scene, world, terrain, x, z, randAngle(), w, l, h);
     }
 
-    // --- Half-pipes (0–3) ---
-    const pipeCount = Math.floor(rng() * 4);
+    // --- Half-pipes (0–3) × density ---
+    const pipeCount = Math.round(Math.floor(rng() * 4) * d);
     for (let i = 0; i < pipeCount; i++) {
       const [x, z] = randPos();
       const w = 15 + rng() * 10;
@@ -99,8 +103,8 @@ export class StuntStructures {
       this.addHalfPipe(scene, world, terrain, x, z, randAngle(), w, l, h);
     }
 
-    // --- Spiral towers (0–2) ---
-    const spiralCount = Math.floor(rng() * 3);
+    // --- Spiral towers (0–2) × density ---
+    const spiralCount = Math.round(Math.floor(rng() * 3) * d);
     for (let i = 0; i < spiralCount; i++) {
       const [x, z] = randPos();
       this.addSpiralTower(scene, world, terrain, x, z, rng);

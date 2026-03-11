@@ -66,6 +66,7 @@ export const GameState = {
   PLAYING: 'PLAYING',
   PAUSED: 'PAUSED',
   CAR_PICKER: 'CAR_PICKER',
+  WORLD_PICKER: 'WORLD_PICKER',
 } as const;
 
 export type GameState = (typeof GameState)[keyof typeof GameState];
@@ -75,5 +76,7 @@ export interface GameCallbacks {
   onStateChange: (state: GameState) => void;
   onMenuIndexChange?: (index: number) => void;
   onCarPickerIndexChange?: (index: number) => void;
+  onWorldPickerIndexChange?: (index: number) => void;
   onStartCarChange?: (carIndex: number) => void;
+  onStartWorldChange?: (worldIndex: number) => void;
 }

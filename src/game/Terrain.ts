@@ -1,52 +1,49 @@
 import * as THREE from 'three';
 import { seedNoise } from './noise';
-import {
-  TERRAIN_SIZE,
-  TERRAIN_SEGMENTS,
-  TERRAIN_MAX_HEIGHT,
-  TERRAIN_NOISE_SCALE,
-  TERRAIN_NOISE_OCTAVES,
-  TERRAIN_FLAT_RADIUS,
-  COLORS,
-} from './constants';
+import type { WorldConfig } from './WorldConfig';
 
 export class Terrain {
   public mesh: THREE.Mesh;
   public heightData: number[][];
+  public config: WorldConfig;
 
-  constructor(scene: THREE.Scene, seed: number) {
+  constructor(scene: THREE.Scene, seed: number, config: WorldConfig) {
+    this.config = config;
     this.heightData = this.generateHeightmap(seed);
     this.mesh = this.createMesh();
     scene.add(this.mesh);
   }
 
   private generateHeightmap(seed: number): number[][] {
+    const { terrainSize, terrainSegments, terrainMaxHeight, terrainNoiseScale,
+            terrainNoiseOctaves, terrainFlatRadius, edgeWallHeight } = this.config;
+
     const noise = seedNoise(seed);
     const data: number[][] = [];
-    const halfSize = TERRAIN_SIZE / 2;
-    const step = TERRAIN_SIZE / (TERRAIN_SEGMENTS - 1);
+    const halfSize = terrainSize / 2;
+    const step = terrainSize / (terrainSegments - 1);
 
-    for (let i = 0; i < TERRAIN_SEGMENTS; i++) {
+    for (let i = 0; i < terrainSegments; i++) {
       data[i] = [];
-      for (let j = 0; j < TERRAIN_SEGMENTS; j++) {
+      for (let j = 0; j < terrainSegments; j++) {
         const worldX = -halfSize + j * step;
         const worldZ = -halfSize + i * step;
 
         // Fractal noise
         let height = 0;
         let amplitude = 1;
-        let frequency = TERRAIN_NOISE_SCALE;
-        for (let o = 0; o < TERRAIN_NOISE_OCTAVES; o++) {
+        let frequency = terrainNoiseScale;
+        for (let o = 0; o < terrainNoiseOctaves; o++) {
           height += noise(worldX * frequency, worldZ * frequency) * amplitude;
           amplitude *= 0.5;
           frequency *= 2;
         }
-        height *= TERRAIN_MAX_HEIGHT;
+        height *= terrainMaxHeight;
 
         // Flatten spawn area with smooth falloff
         const dist = Math.sqrt(worldX * worldX + worldZ * worldZ);
-        if (dist < TERRAIN_FLAT_RADIUS) {
-          const t = dist / TERRAIN_FLAT_RADIUS;
+        if (dist < terrainFlatRadius) {
+          const t = dist / terrainFlatRadius;
           const blend = t * t * (3 - 2 * t); // smoothstep
           height *= blend;
         }
@@ -54,11 +51,11 @@ export class Terrain {
         // Raise edges to form natural bowl boundary
         const edgeDist = Math.max(
           Math.abs(worldX) / halfSize,
-          Math.abs(worldZ) / halfSize
+          Math.abs(worldZ) / halfSize,
         );
         if (edgeDist > 0.85) {
           const edgeT = (edgeDist - 0.85) / 0.15;
-          height += edgeT * edgeT * 40;
+          height += edgeT * edgeT * edgeWallHeight;
         }
 
         data[i][j] = height;
@@ -68,11 +65,13 @@ export class Terrain {
   }
 
   private createMesh(): THREE.Mesh {
+    const { terrainSize, terrainSegments, terrainMaxHeight, colors } = this.config;
+
     const geo = new THREE.PlaneGeometry(
-      TERRAIN_SIZE,
-      TERRAIN_SIZE,
-      TERRAIN_SEGMENTS - 1,
-      TERRAIN_SEGMENTS - 1
+      terrainSize,
+      terrainSize,
+      terrainSegments - 1,
+      terrainSegments - 1,
     );
 
     // Rotate plane to XZ
@@ -80,9 +79,9 @@ export class Terrain {
 
     // Displace vertices by heightmap
     const positions = geo.attributes.position;
-    for (let i = 0; i < TERRAIN_SEGMENTS; i++) {
-      for (let j = 0; j < TERRAIN_SEGMENTS; j++) {
-        const vertexIndex = i * TERRAIN_SEGMENTS + j;
+    for (let i = 0; i < terrainSegments; i++) {
+      for (let j = 0; j < terrainSegments; j++) {
+        const vertexIndex = i * terrainSegments + j;
         positions.setY(vertexIndex, this.heightData[i][j]);
       }
     }
@@ -90,25 +89,25 @@ export class Terrain {
     geo.computeVertexNormals();
 
     // Vertex colors based on height
-    const colors = new Float32Array(positions.count * 3);
-    const grassColor = new THREE.Color(COLORS.grassGreen);
-    const dirtColor = new THREE.Color(COLORS.dirtBrown);
-    const rockColor = new THREE.Color(COLORS.rockGray);
+    const colorArray = new Float32Array(positions.count * 3);
+    const lowColor = new THREE.Color(colors.groundLow);
+    const midColor = new THREE.Color(colors.groundMid);
+    const highColor = new THREE.Color(colors.groundHigh);
 
     for (let i = 0; i < positions.count; i++) {
       const y = positions.getY(i);
-      const t = Math.max(0, Math.min(1, y / TERRAIN_MAX_HEIGHT));
+      const t = Math.max(0, Math.min(1, y / Math.max(terrainMaxHeight, 1)));
       let color: THREE.Color;
       if (t < 0.4) {
-        color = grassColor.clone().lerp(dirtColor, t / 0.4);
+        color = lowColor.clone().lerp(midColor, t / 0.4);
       } else {
-        color = dirtColor.clone().lerp(rockColor, (t - 0.4) / 0.6);
+        color = midColor.clone().lerp(highColor, (t - 0.4) / 0.6);
       }
-      colors[i * 3] = color.r;
-      colors[i * 3 + 1] = color.g;
-      colors[i * 3 + 2] = color.b;
+      colorArray[i * 3] = color.r;
+      colorArray[i * 3 + 1] = color.g;
+      colorArray[i * 3 + 2] = color.b;
     }
-    geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    geo.setAttribute('color', new THREE.BufferAttribute(colorArray, 3));
 
     const mat = new THREE.MeshLambertMaterial({
       vertexColors: true,
@@ -121,13 +120,14 @@ export class Terrain {
   }
 
   getHeightAt(x: number, z: number): number {
-    const halfSize = TERRAIN_SIZE / 2;
-    const step = TERRAIN_SIZE / (TERRAIN_SEGMENTS - 1);
+    const { terrainSize, terrainSegments } = this.config;
+    const halfSize = terrainSize / 2;
+    const step = terrainSize / (terrainSegments - 1);
     const i = (z + halfSize) / step;
     const j = (x + halfSize) / step;
 
-    const i0 = Math.floor(Math.max(0, Math.min(i, TERRAIN_SEGMENTS - 2)));
-    const j0 = Math.floor(Math.max(0, Math.min(j, TERRAIN_SEGMENTS - 2)));
+    const i0 = Math.floor(Math.max(0, Math.min(i, terrainSegments - 2)));
+    const j0 = Math.floor(Math.max(0, Math.min(j, terrainSegments - 2)));
     const fi = i - i0;
     const fj = j - j0;
 
