@@ -123,6 +123,14 @@ body {
   margin-top: 16px;
 }
 
+/* ===== CAR ICON ===== */
+.car-icon {
+  display: block;
+  width: 80px;
+  height: 34px;
+  margin: 0 auto 6px;
+}
+
 /* ===== CAR SELECTOR ===== */
 #car-selector {
   display: flex;
@@ -134,16 +142,20 @@ body {
 .car-option {
   font-family: 'Orbitron', sans-serif;
   font-weight: 700;
-  font-size: 0.9rem;
+  font-size: 0.75rem;
   letter-spacing: 2px;
   text-transform: uppercase;
-  padding: 10px 20px;
+  padding: 12px 20px 10px;
   border: 2px solid rgba(255, 255, 255, 0.3);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.05);
   color: rgba(255, 255, 255, 0.5);
   cursor: pointer;
   transition: all 0.2s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 140px;
 }
 
 .car-option:hover {
@@ -158,29 +170,71 @@ body {
   box-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
 }
 
-/* ===== WORLD SELECTOR ===== */
-#world-selector {
+/* ===== CAR PICKER (pause menu) ===== */
+.car-pick-option {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+  align-items: center;
+  gap: 16px;
+}
+
+.car-pick-option .car-icon {
+  width: 60px;
+  height: 25px;
+  margin: 0;
+  flex-shrink: 0;
+}
+
+/* ===== WORLD PREVIEW THUMBNAIL ===== */
+.world-preview {
+  display: block;
+  width: 100%;
+  height: 32px;
+  border-radius: 4px;
+  margin-bottom: 6px;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Terrain bumps as a pseudo-element */
+.world-preview::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 40%;
+  border-radius: 50% 60% 0 0 / 100% 100% 0 0;
+}
+
+/* ===== WORLD SELECTOR (start screen) ===== */
+#world-selector {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
   margin-bottom: 20px;
-  justify-content: center;
-  max-width: 600px;
+  max-width: 520px;
 }
 
 .world-option {
   font-family: 'Orbitron', sans-serif;
   font-weight: 700;
-  font-size: 0.7rem;
+  font-size: 0.65rem;
   letter-spacing: 1px;
   text-transform: uppercase;
-  padding: 8px 14px;
+  padding: 8px 10px 6px;
   border: 2px solid rgba(255, 255, 255, 0.3);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.05);
   color: rgba(255, 255, 255, 0.5);
   cursor: pointer;
   transition: all 0.2s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.world-option .world-preview {
+  height: 36px;
 }
 
 .world-option:hover {
@@ -193,6 +247,48 @@ body {
   background: rgba(255, 255, 255, 0.15);
   color: #fff;
   box-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
+}
+
+/* ===== WORLD PICKER (pause menu) ===== */
+.world-pick-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+  max-width: 600px;
+}
+
+.world-pick-option {
+  font-family: 'Orbitron', sans-serif;
+  font-weight: 700;
+  font-size: 0.65rem;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 10px 12px 8px;
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.world-pick-option .world-preview {
+  height: 36px;
+}
+
+.world-pick-option:hover,
+.world-pick-option.focused {
+  color: #1a2a3a;
+  background: #fff;
+  box-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+}
+
+.world-pick-option + .world-pick-option {
+  margin-top: 0;
 }
 
 /* ===== CONTROLS INFO ===== */
@@ -237,5 +333,16 @@ kbd {
 
   .controls-info {
     font-size: 11px;
+  }
+
+  #world-selector {
+    grid-template-columns: repeat(4, 1fr);
+    max-width: 360px;
+    gap: 6px;
+  }
+
+  .world-option {
+    font-size: 0.5rem;
+    padding: 6px 6px 4px;
   }
 }

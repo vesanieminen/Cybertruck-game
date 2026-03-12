@@ -3,7 +3,7 @@ import { CybertruckGame } from './game/CybertruckGame';
 import { GameState } from './game/constants';
 import { CAR_TYPES } from './game/VehicleModel';
 import type { CarType } from './game/VehicleModel';
-import { WORLD_IDS } from './game/WorldConfig';
+import { WORLD_IDS, getWorldConfig } from './game/WorldConfig';
 import type { WorldId } from './game/WorldConfig';
 
 const container = document.getElementById('game-container')!;
@@ -41,6 +41,36 @@ const worldPickerButtons: HTMLButtonElement[] = [
   ...Array.from(worldPickOptions),
   worldPickerBackBtn as HTMLButtonElement,
 ];
+
+// Apply world preview colors from WorldConfig
+function hexToCSS(hex: number): string {
+  return '#' + hex.toString(16).padStart(6, '0');
+}
+
+document.querySelectorAll<HTMLElement>('[data-world] .world-preview').forEach((el) => {
+  const worldId = el.parentElement?.dataset.world as WorldId;
+  if (!worldId) return;
+  const config = getWorldConfig(worldId);
+  const skyTop = hexToCSS(config.colors.skyTop);
+  const skyHorizon = hexToCSS(config.colors.skyHorizon);
+  const groundLow = hexToCSS(config.colors.groundLow);
+  const groundMid = hexToCSS(config.colors.groundMid);
+
+  // Sky gradient background
+  el.style.background = `linear-gradient(to bottom, ${skyTop} 0%, ${skyHorizon} 60%, ${groundLow} 60%, ${groundMid} 100%)`;
+
+  // Ground hill bump color
+  (el as HTMLElement).style.setProperty('--ground-color', groundMid);
+});
+
+// Apply ground hill color to ::after pseudo-elements via CSS custom property
+const previewStyle = document.createElement('style');
+previewStyle.textContent = `
+  [data-world] .world-preview::after {
+    background: var(--ground-color, #888);
+  }
+`;
+document.head.appendChild(previewStyle);
 
 const game = new CybertruckGame(container, {
   onSpeedUpdate(kmh) {
